@@ -19,10 +19,10 @@ const Layout: React.FC = () => {
       />
       
       <main className={`min-h-screen transition-all duration-200 ${
-        sidebarCollapsed ? 'lg:ml-64' : 'lg:ml-64'
+        sidebarCollapsed ? 'lg:ml-16' : 'lg:ml-64'
       }`}>
         <Header onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
-        <div className="p-6">
+        <div className="p-1">
           <Outlet />
         </div>
       </main>
