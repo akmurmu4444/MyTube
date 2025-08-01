@@ -1,10 +1,13 @@
 import axios from 'axios';
+import dotenv from 'dotenv';
+dotenv.config()
 
 class YouTubeService {
   constructor() {
+    console.log(process.env.YOUTUBE_API_KEY)
     this.apiKey = process.env.YOUTUBE_API_KEY;
     this.baseURL = 'https://www.googleapis.com/youtube/v3';
-    
+
     if (!this.apiKey) {
       console.warn('⚠️  YouTube API key not found. YouTube features will be disabled.');
     }
@@ -100,15 +103,15 @@ class YouTubeService {
     }
 
     try {
-      const searchPromises = tags.map(tag => 
+      const searchPromises = tags.map(tag =>
         this.searchVideos(tag, Math.ceil(maxResults / tags.length))
       );
 
       const results = await Promise.all(searchPromises);
-      
+
       // Flatten and deduplicate results
       const allVideos = results.flat();
-      const uniqueVideos = allVideos.filter((video, index, self) => 
+      const uniqueVideos = allVideos.filter((video, index, self) =>
         index === self.findIndex(v => v.youtubeId === video.youtubeId)
       );
 
@@ -126,11 +129,11 @@ class YouTubeService {
   parseDuration(duration) {
     const match = duration.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
     if (!match) return 0;
-    
+
     const hours = parseInt(match[1] || 0);
     const minutes = parseInt(match[2] || 0);
     const seconds = parseInt(match[3] || 0);
-    
+
     return hours * 3600 + minutes * 60 + seconds;
   }
 
