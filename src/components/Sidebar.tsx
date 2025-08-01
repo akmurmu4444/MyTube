@@ -57,7 +57,9 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, isCollapsed, onClose, onToggl
         flex flex-col
       `}>
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 min-h-[64px]">
+        <div className={`flex items-center p-4 border-b border-gray-200 dark:border-gray-700 min-h-[64px] ${
+          isCollapsed ? 'lg:justify-center' : 'justify-between'
+        }`}>
           <div className={`flex items-center space-x-3 ${isCollapsed ? 'lg:justify-center lg:space-x-0' : ''}`}>
             <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
               <span className="text-white font-bold text-sm">MT</span>
@@ -68,24 +70,35 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, isCollapsed, onClose, onToggl
           </div>
           
           {/* Mobile close button */}
-          <button
-            onClick={onClose}
-            className="lg:hidden p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-          >
-            <X className="w-5 h-5 text-gray-600 dark:text-gray-300" />
-          </button>
+          {!isCollapsed && (
+            <>
+              {/* Mobile close button */}
+              <button
+                onClick={onClose}
+                className="lg:hidden p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              >
+                <X className="w-5 h-5 text-gray-600 dark:text-gray-300" />
+              </button>
+              
+              {/* Desktop collapse button */}
+              <button
+                onClick={onToggleCollapse}
+                className="hidden lg:block p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              >
+                <ChevronLeft className="w-4 h-4 text-gray-600 dark:text-gray-300" />
+              </button>
+            </>
+          )}
           
-          {/* Desktop collapse button */}
-          <button
-            onClick={onToggleCollapse}
-            className="hidden lg:block p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-          >
-            {isCollapsed ? (
-              <ChevronRight className="w-4 h-4 text-gray-600 dark:text-gray-300" />
-            ) : (
-              <ChevronLeft className="w-4 h-4 text-gray-600 dark:text-gray-300" />
-            )}
-          </button>
+          {/* Collapsed expand button */}
+          {isCollapsed && (
+            <button
+              onClick={onToggleCollapse}
+              className="hidden lg:block absolute top-4 right-2 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            >
+              <ChevronRight className="w-3 h-3 text-gray-600 dark:text-gray-300" />
+            </button>
+          )}
         </div>
 
         {/* Navigation */}
@@ -96,10 +109,10 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, isCollapsed, onClose, onToggl
                 key={path}
                 to={path}
                 onClick={() => isOpen && onClose()}
-                title={isCollapsed ? label : undefined}
+                title={isCollapsed ? label : ''}
                 className={({ isActive }) => `
                   flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors
-                  ${isCollapsed ? 'justify-center' : 'space-x-3'}
+                  ${isCollapsed ? 'lg:justify-center' : 'space-x-3'}
                   ${isActive
                     ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300'
                     : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
@@ -107,7 +120,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, isCollapsed, onClose, onToggl
                 `}
               >
                 <Icon className="w-5 h-5" />
-                {!isCollapsed && <span>{label}</span>}
+                <span className={`${isCollapsed ? 'lg:hidden' : ''}`}>{label}</span>
               </NavLink>
             ))}
           </div>
