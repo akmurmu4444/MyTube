@@ -143,6 +143,10 @@ const Home: React.FC = () => {
                     key={video._id}
                     className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden hover:shadow-md transition-shadow"
                   >
+                    <div 
+                      className="cursor-pointer"
+                      onClick={() => window.location.href = `/video/${video._id}`}
+                    >
                     <div className="relative">
                       <img
                         src={video.thumbnail}
@@ -192,6 +196,7 @@ const Home: React.FC = () => {
                         </span>
                         {video.isLiked && <span>❤️</span>}
                       </div>
+                    </div>
                     </div>
                   </div>
                 ))}

@@ -92,11 +92,11 @@ const VideoPlayer: React.FC = () => {
   }
 
   const getEmbedUrl = (url: string): string => {
-    const videoId = extractVideoId(url);
+    const videoId = extractVideoId(video.youtubeId || video.url);
     if (videoId) {
       return `https://www.youtube.com/embed/${videoId}?enablejsapi=1&origin=${window.location.origin}&autoplay=1`;
     }
-    return url;
+    return video.url;
   };
 
   const extractVideoId = (url: string): string | null => {
