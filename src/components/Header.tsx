@@ -28,7 +28,7 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
 
   return (
     <>
-      <header className="fixed top-0 left-0 right-0 z-30 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm">
+      <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm">
         <div className="flex items-center justify-between px-6 py-3">
           <div className="flex items-center space-x-4">
             <button
@@ -37,7 +37,7 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
             >
               <Menu className="w-5 h-5 text-gray-600 dark:text-gray-300" />
             </button>
-            <h1 className="text-xl font-bold text-gray-900 dark:text-white">MyTube</h1>
+            <h1 className="lg:hidden text-xl font-bold text-gray-900 dark:text-white">MyTube</h1>
           </div>
 
           <div className="flex-1 max-w-2xl mx-8">
