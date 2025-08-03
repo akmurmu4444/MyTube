@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { X, Plus } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '../redux/store';
-import { addVideo } from '../redux/slices/videosSlice';
 import { addTag } from '../redux/slices/tagsSlice';
+import { addVideoToPlaylist } from '../redux/slices/playlistsSlice';
 
 interface AddVideoModalProps {
   isOpen: boolean;
@@ -45,7 +45,7 @@ const AddVideoModal: React.FC<AddVideoModalProps> = ({ isOpen, onClose }) => {
     e.preventDefault();
     if (!url || !title) return;
 
-    dispatch(addVideo({
+    dispatch(addVideoToPlaylist({
       title,
       url,
       thumbnail: generateThumbnail(url),

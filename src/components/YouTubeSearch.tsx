@@ -3,6 +3,7 @@ import { Search, Plus, Clock, Eye, ThumbsUp } from 'lucide-react';
 import { youtubeAPI, videosAPI } from '../services/api';
 import { YouTubeVideo } from '../types/api';
 import { useTheme } from '../context/ThemeContext';
+import { useNavigate } from 'react-router-dom';
 
 interface YouTubeSearchProps {
   onVideoSaved?: (video: any) => void;
@@ -14,7 +15,8 @@ const YouTubeSearch: React.FC<YouTubeSearchProps> = ({ onVideoSaved }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [savingVideoId, setSavingVideoId] = useState<string | null>(null);
-  
+  const navigate = useNavigate();
+
   const { isDark } = useTheme();
 
   // Debounced search
@@ -40,6 +42,7 @@ const YouTubeSearch: React.FC<YouTubeSearchProps> = ({ onVideoSaved }) => {
     try {
       const response = await youtubeAPI.search(query);
       setResults(response.data.data || []);
+      // console.log('Search results:', response.data.data);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to search YouTube');
       setResults([]);
@@ -50,17 +53,17 @@ const YouTubeSearch: React.FC<YouTubeSearchProps> = ({ onVideoSaved }) => {
 
   const handleSaveVideo = async (video: YouTubeVideo) => {
     setSavingVideoId(video.youtubeId);
-    
+
     try {
       const response = await videosAPI.save({
         youtubeId: video.youtubeId,
         tags: []
       });
-      
+
       if (onVideoSaved) {
         onVideoSaved(response.data.data);
       }
-      
+
       // Show success feedback
       console.log('✅ Video saved successfully');
     } catch (err: any) {
@@ -75,11 +78,11 @@ const YouTubeSearch: React.FC<YouTubeSearchProps> = ({ onVideoSaved }) => {
     // Parse ISO 8601 duration (PT4M13S) to readable format
     const match = duration.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
     if (!match) return duration;
-    
+
     const hours = parseInt(match[1] || '0');
     const minutes = parseInt(match[2] || '0');
     const seconds = parseInt(match[3] || '0');
-    
+
     if (hours > 0) {
       return `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
     }
@@ -128,14 +131,14 @@ const YouTubeSearch: React.FC<YouTubeSearchProps> = ({ onVideoSaved }) => {
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
             Search Results ({results.length})
           </h3>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-96 overflow-y-auto">
             {results.map((video) => (
               <div
                 key={video.youtubeId}
                 className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden hover:shadow-md transition-shadow"
               >
-                <div className="relative">
+                <div className="relative" onClick={() => navigate(`/video/${video._id}`)}>
                   <img
                     src={video.thumbnail}
                     alt={video.title}
@@ -145,16 +148,16 @@ const YouTubeSearch: React.FC<YouTubeSearchProps> = ({ onVideoSaved }) => {
                     {formatDuration(video.duration)}
                   </div>
                 </div>
-                
+
                 <div className="p-3">
                   <h4 className="font-medium text-gray-900 dark:text-white text-sm line-clamp-2 mb-2">
                     {video.title}
                   </h4>
-                  
+
                   <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">
                     {video.channelTitle}
                   </p>
-                  
+
                   {(video.viewCount || video.likeCount) && (
                     <div className="flex items-center space-x-3 text-xs text-gray-500 dark:text-gray-400 mb-3">
                       {video.viewCount && (
@@ -171,7 +174,7 @@ const YouTubeSearch: React.FC<YouTubeSearchProps> = ({ onVideoSaved }) => {
                       )}
                     </div>
                   )}
-                  
+
                   <button
                     onClick={() => handleSaveVideo(video)}
                     disabled={savingVideoId === video.youtubeId}

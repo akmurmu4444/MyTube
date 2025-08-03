@@ -1,17 +1,17 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
-import { RootState } from '../redux/store';
-import { updateVideo } from '../redux/slices/videosSlice';
+import { AppDispatch, RootState, useAppSelector } from '../redux/store';
+import { updateVideoAsync } from '../redux/slices/videosSlice';
 import { addHistoryEntry, updateWatchPosition } from '../redux/slices/historySlice';
 import { addNote } from '../redux/slices/notesSlice';
-import { 
-  ArrowLeft, 
-  Heart, 
-  Clock, 
-  Pin, 
-  StickyNote, 
-  Minimize, 
+import {
+  ArrowLeft,
+  Heart,
+  Clock,
+  Pin,
+  StickyNote,
+  Minimize,
   Maximize,
   Volume2,
   VolumeX,
@@ -30,8 +30,9 @@ import { formatDistanceToNow } from 'date-fns';
 
 const VideoPlayer: React.FC = () => {
   const { id } = useParams<{ id: string }>();
+  console.log('Video ID:', id);
   const navigate = useNavigate();
-  const dispatch = useDispatch();
+  const dispatch = useDispatch<AppDispatch>();
 
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showNoteForm, setShowNoteForm] = useState(false);
@@ -46,20 +47,20 @@ const VideoPlayer: React.FC = () => {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const video = useSelector((state: RootState) => 
-    state.videos.videos.find(v => v.id === id)
+  const video = useAppSelector(state =>
+    state.videos.videos.find(v => v._id === id)
   );
-  const notes = useSelector((state: RootState) => 
-    state.notes.notes.filter(n => n.videoId === id)
-  );
+  console.log('Selected Video:', video);
+  const notes = useAppSelector(state => state.notes.notes);
+
   const { watchlist } = useSelector((state: RootState) => state.videos);
 
   useEffect(() => {
     if (video) {
       // Update watch count
-      dispatch(updateVideo({
-        id: video.id,
-        updates: { 
+      dispatch(updateVideoAsync({
+        id: video._id,
+        updates: {
           watchCount: video.watchCount + 1,
           watchedAt: new Date().toISOString()
         }
@@ -67,7 +68,7 @@ const VideoPlayer: React.FC = () => {
 
       // Add to history (mock duration for now)
       dispatch(addHistoryEntry({
-        videoId: video.id,
+        videoId: video._id,
         duration: 300, // 5 minutes mock duration
         position: 0
       }));
@@ -91,25 +92,8 @@ const VideoPlayer: React.FC = () => {
     );
   }
 
-  const getEmbedUrl = (url: string): string => {
-    const videoId = extractVideoId(video.youtubeId || video.url);
-    if (videoId) {
-      return `https://www.youtube.com/embed/${videoId}?enablejsapi=1&origin=${window.location.origin}&autoplay=1`;
-    }
-    return video.url;
-  };
-
-  const extractVideoId = (url: string): string | null => {
-    const patterns = [
-      /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/,
-      /youtube\.com\/v\/([^&\n?#]+)/,
-    ];
-    
-    for (const pattern of patterns) {
-      const match = url.match(pattern);
-      if (match) return match[1];
-    }
-    return null;
+  const getEmbedUrl = (): string => {
+    return `https://www.youtube.com/embed/${video.youtubeId}?enablejsapi=1&origin=${window.location.origin}&autoplay=1`;
   };
 
   const toggleFullscreen = () => {
@@ -123,15 +107,15 @@ const VideoPlayer: React.FC = () => {
   };
 
   const handleLike = () => {
-    dispatch(updateVideo({
-      id: video.id,
+    dispatch(updateVideoAsync({
+      id: video._id,
       updates: { isLiked: !video.isLiked }
     }));
   };
 
   const handlePin = () => {
-    dispatch(updateVideo({
-      id: video.id,
+    dispatch(updateVideoAsync({
+      id: video._id,
       updates: { isPinned: !video.isPinned }
     }));
   };
@@ -141,7 +125,7 @@ const VideoPlayer: React.FC = () => {
     if (!noteContent.trim()) return;
 
     dispatch(addNote({
-      videoId: video.id,
+      videoId: video._id,
       content: noteContent.trim(),
       timestamp: Math.floor(currentTime)
     }));
@@ -154,7 +138,7 @@ const VideoPlayer: React.FC = () => {
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
     const secs = Math.floor(seconds % 60);
-    
+
     if (hours > 0) {
       return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
     }
@@ -189,13 +173,13 @@ const VideoPlayer: React.FC = () => {
           {/* Main Video Section */}
           <div className="lg:col-span-2 space-y-4">
             {/* Video Player */}
-            <div 
+            <div
               ref={containerRef}
               className="relative bg-black rounded-lg overflow-hidden aspect-video"
             >
               <iframe
                 ref={iframeRef}
-                src={getEmbedUrl(video.url)}
+                src={getEmbedUrl()}
                 title={video.title}
                 className="w-full h-full"
                 allowFullScreen
@@ -221,11 +205,10 @@ const VideoPlayer: React.FC = () => {
               <div className="flex items-center space-x-2">
                 <button
                   onClick={handleLike}
-                  className={`flex items-center space-x-2 px-4 py-2 rounded-full transition-colors ${
-                    video.isLiked
-                      ? 'bg-red-100 dark:bg-red-900 text-red-600 dark:text-red-400'
-                      : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                  }`}
+                  className={`flex items-center space-x-2 px-4 py-2 rounded-full transition-colors ${video.isLiked
+                    ? 'bg-red-100 dark:bg-red-900 text-red-600 dark:text-red-400'
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                    }`}
                 >
                   <ThumbsUp className={`w-4 h-4 ${video.isLiked ? 'fill-current' : ''}`} />
                   <span className="text-sm font-medium">
@@ -240,11 +223,10 @@ const VideoPlayer: React.FC = () => {
 
                 <button
                   onClick={handlePin}
-                  className={`flex items-center space-x-2 px-4 py-2 rounded-full transition-colors ${
-                    video.isPinned
-                      ? 'bg-yellow-100 dark:bg-yellow-900 text-yellow-600 dark:text-yellow-400'
-                      : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                  }`}
+                  className={`flex items-center space-x-2 px-4 py-2 rounded-full transition-colors ${video.isPinned
+                    ? 'bg-yellow-100 dark:bg-yellow-900 text-yellow-600 dark:text-yellow-400'
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                    }`}
                 >
                   <Pin className="w-4 h-4" />
                   <span className="text-sm font-medium">
@@ -274,7 +256,7 @@ const VideoPlayer: React.FC = () => {
                     {video.title.charAt(0).toUpperCase()}
                   </span>
                 </div>
-                
+
                 <div className="flex-1">
                   <h3 className="font-semibold text-gray-900 dark:text-white">
                     {video.title.split(' ').slice(0, 3).join(' ')} Channel
@@ -298,7 +280,7 @@ const VideoPlayer: React.FC = () => {
                       <ChevronDown className="w-4 h-4" />
                     )}
                   </button>
-                  
+
                   {showDescription && (
                     <div className="mt-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
                       <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
@@ -314,7 +296,7 @@ const VideoPlayer: React.FC = () => {
                 <div className="mt-4">
                   <div className="flex flex-wrap gap-2">
                     {video.tags.map(tag => (
-                      <span 
+                      <span
                         key={tag}
                         className="px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full text-sm"
                       >
