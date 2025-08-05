@@ -1,10 +1,11 @@
 import express from 'express';
 import History from '../models/History.js';
+import { authenticateToken } from '../middleware/auth.js';
 
 const router = express.Router();
 
 // Get watch history
-router.get('/', async (req, res) => {
+router.get('/', authenticateToken, async (req, res) => {
   try {
     const { 
       videoId, 
@@ -14,7 +15,7 @@ router.get('/', async (req, res) => {
       page = 1 
     } = req.query;
     
-    let query = {};
+    let query = { userId: req.user._id };
     
     if (videoId) {
       query.videoId = videoId;
@@ -53,7 +54,7 @@ router.get('/', async (req, res) => {
 });
 
 // Add history entry
-router.post('/', async (req, res) => {
+router.post('/', authenticateToken, async (req, res) => {
   try {
     const { videoId, duration, position = 0 } = req.body;
     
@@ -62,6 +63,7 @@ router.post('/', async (req, res) => {
     }
 
     const historyEntry = new History({
+      userId: req.user._id,
       videoId,
       duration,
       position
@@ -82,7 +84,7 @@ router.post('/', async (req, res) => {
 });
 
 // Get watch statistics
-router.get('/stats', async (req, res) => {
+router.get('/stats', authenticateToken, async (req, res) => {
   try {
     const { period = 'week' } = req.query;
     
@@ -106,6 +108,7 @@ router.get('/stats', async (req, res) => {
     const stats = await History.aggregate([
       {
         $match: {
+          userId: req.user._id,
           watchedAt: { $gte: startDate }
         }
       },
@@ -146,9 +149,9 @@ router.get('/stats', async (req, res) => {
 });
 
 // Clear history
-router.delete('/', async (req, res) => {
+router.delete('/', authenticateToken, async (req, res) => {
   try {
-    const result = await History.deleteMany({});
+    const result = await History.deleteMany({ userId: req.user._id });
     
     res.json({
       success: true,

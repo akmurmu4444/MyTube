@@ -6,8 +6,12 @@ import compression from 'compression';
 import morgan from 'morgan';
 import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
+import session from 'express-session';
+import MongoStore from 'connect-mongo';
+import passport from './config/passport.js';
 
 // Import routes
+import authRoutes from './routes/auth.js';
 import videoRoutes from './routes/videos.js';
 import playlistRoutes from './routes/playlists.js';
 import noteRoutes from './routes/notes.js';
@@ -42,6 +46,24 @@ app.use(cors({
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
+// Session configuration for OAuth
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'your-session-secret',
+  resave: false,
+  saveUninitialized: false,
+  store: MongoStore.create({
+    mongoUrl: process.env.MONGODB_URI || 'mongodb://localhost:27017/mytube'
+  }),
+  cookie: {
+    secure: process.env.NODE_ENV === 'production',
+    maxAge: 24 * 60 * 60 * 1000 // 24 hours
+  }
+}));
+
+// Passport middleware
+app.use(passport.initialize());
+app.use(passport.session());
+
 // Logging
 if (process.env.NODE_ENV === 'development') {
   app.use(morgan('dev'));
@@ -53,6 +75,7 @@ mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/mytube')
   .catch(err => console.error('❌ MongoDB connection error:', err));
 
 // Routes
+app.use('/api/auth', authRoutes);
 app.use('/api/videos', videoRoutes);
 app.use('/api/playlists', playlistRoutes);
 app.use('/api/notes', noteRoutes);
@@ -85,6 +108,8 @@ app.use('*', (req, res) => {
 
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`🔐 JWT Secret: ${process.env.JWT_SECRET ? 'Set' : 'Not set'}`);
+  console.log(`🔑 Google OAuth: ${process.env.GOOGLE_CLIENT_ID ? 'Configured' : 'Not configured'}`);
   console.log(`📱 Frontend URL: ${process.env.FRONTEND_URL}`);
   console.log(`🌍 Environment: ${process.env.NODE_ENV}`);
 });

@@ -1,7 +1,5 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { Provider } from 'react-redux';
-import { store } from './redux/store';
 import Layout from './components/Layout';
 import Home from './pages/Home';
 import Watchlist from './pages/Watchlist';
@@ -12,31 +10,71 @@ import Notes from './pages/Notes';
 import History from './pages/History';
 import Stats from './pages/Stats';
 import VideoPlayer from './pages/VideoPlayer';
+import Login from './pages/Login';
+import Register from './pages/Register';
+import AuthCallback from './pages/AuthCallback';
+import ProtectedRoute from './components/ProtectedRoute';
 import { ThemeProvider } from './context/ThemeContext';
 
 function App() {
   return (
-    <Provider store={store}>
-      <ThemeProvider>
-        <Router>
-          <div className="App">
-            <Routes>
-              <Route path="/video/:id" element={<VideoPlayer />} />
-              <Route path="/" element={<Layout />}>
-                <Route index element={<Home />} />
-                <Route path="watchlist" element={<Watchlist />} />
-                <Route path="liked" element={<Liked />} />
-                <Route path="playlists" element={<Playlists />} />
-                <Route path="playlists/:id" element={<PlaylistDetail />} />
-                <Route path="notes" element={<Notes />} />
-                <Route path="history" element={<History />} />
-                <Route path="stats" element={<Stats />} />
-              </Route>
-            </Routes>
-          </div>
-        </Router>
-      </ThemeProvider>
-    </Provider>
+    <ThemeProvider>
+      <Router>
+        <div className="App">
+          <Routes>
+            {/* Public routes */}
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            <Route path="/auth/callback" element={<AuthCallback />} />
+            
+            {/* Video player (can be accessed by anyone) */}
+            <Route path="/video/:id" element={<VideoPlayer />} />
+            
+            {/* Main app routes */}
+            <Route path="/" element={<Layout />}>
+              <Route index element={<Home />} />
+              
+              {/* Protected routes */}
+              <Route path="watchlist" element={
+                <ProtectedRoute>
+                  <Watchlist />
+                </ProtectedRoute>
+              } />
+              <Route path="liked" element={
+                <ProtectedRoute>
+                  <Liked />
+                </ProtectedRoute>
+              } />
+              <Route path="playlists" element={
+                <ProtectedRoute>
+                  <Playlists />
+                </ProtectedRoute>
+              } />
+              <Route path="playlists/:id" element={
+                <ProtectedRoute>
+                  <PlaylistDetail />
+                </ProtectedRoute>
+              } />
+              <Route path="notes" element={
+                <ProtectedRoute>
+                  <Notes />
+                </ProtectedRoute>
+              } />
+              <Route path="history" element={
+                <ProtectedRoute>
+                  <History />
+                </ProtectedRoute>
+              } />
+              <Route path="stats" element={
+                <ProtectedRoute>
+                  <Stats />
+                </ProtectedRoute>
+              } />
+            </Route>
+          </Routes>
+        </div>
+      </Router>
+    </ThemeProvider>
   );
 }
 

@@ -1,6 +1,12 @@
 import mongoose from 'mongoose';
 
 const historySchema = new mongoose.Schema({
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
+  },
+  
   videoId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Video',
@@ -28,6 +34,7 @@ const historySchema = new mongoose.Schema({
 });
 
 // Indexes for analytics queries
+historySchema.index({ userId: 1, watchedAt: -1 });
 historySchema.index({ videoId: 1, watchedAt: -1 });
 historySchema.index({ watchedAt: -1 });
 

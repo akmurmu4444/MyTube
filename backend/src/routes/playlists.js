@@ -1,12 +1,13 @@
 import express from 'express';
 import Playlist from '../models/Playlist.js';
+import { authenticateToken } from '../middleware/auth.js';
 
 const router = express.Router();
 
 // Get all playlists
-router.get('/', async (req, res) => {
+router.get('/', authenticateToken, async (req, res) => {
   try {
-    const playlists = await Playlist.find()
+    const playlists = await Playlist.find({ userId: req.user._id })
       .populate('videoIds')
       .sort({ updatedAt: -1 });
     
@@ -21,7 +22,7 @@ router.get('/', async (req, res) => {
 });
 
 // Create playlist
-router.post('/', async (req, res) => {
+router.post('/', authenticateToken, async (req, res) => {
   try {
     const { name, description } = req.body;
     
@@ -30,6 +31,7 @@ router.post('/', async (req, res) => {
     }
 
     const playlist = new Playlist({
+      userId: req.user._id,
       name,
       description
     });
@@ -48,11 +50,14 @@ router.post('/', async (req, res) => {
 });
 
 // Get playlist by ID
-router.get('/:id', async (req, res) => {
+router.get('/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
     
-    const playlist = await Playlist.findById(id).populate('videoIds');
+    const playlist = await Playlist.findOne({
+      _id: id,
+      userId: req.user._id
+    }).populate('videoIds');
     
     if (!playlist) {
       return res.status(404).json({ error: 'Playlist not found' });
@@ -69,13 +74,13 @@ router.get('/:id', async (req, res) => {
 });
 
 // Update playlist
-router.put('/:id', async (req, res) => {
+router.put('/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
     const updates = req.body;
 
     const playlist = await Playlist.findByIdAndUpdate(
-      id,
+      { _id: id, userId: req.user._id },
       updates,
       { new: true, runValidators: true }
     ).populate('videoIds');
@@ -96,11 +101,14 @@ router.put('/:id', async (req, res) => {
 });
 
 // Delete playlist
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
 
-    const playlist = await Playlist.findByIdAndDelete(id);
+    const playlist = await Playlist.findOneAndDelete({
+      _id: id,
+      userId: req.user._id
+    });
     
     if (!playlist) {
       return res.status(404).json({ error: 'Playlist not found' });
@@ -117,7 +125,7 @@ router.delete('/:id', async (req, res) => {
 });
 
 // Add video to playlist
-router.post('/:id/videos', async (req, res) => {
+router.post('/:id/videos', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
     const { videoId } = req.body;
@@ -126,7 +134,11 @@ router.post('/:id/videos', async (req, res) => {
       return res.status(400).json({ error: 'Video ID is required' });
     }
 
-    const playlist = await Playlist.findById(id);
+    const playlist = await Playlist.findOne({
+      _id: id,
+      userId: req.user._id
+    });
+    
     if (!playlist) {
       return res.status(404).json({ error: 'Playlist not found' });
     }
@@ -136,7 +148,10 @@ router.post('/:id/videos', async (req, res) => {
       await playlist.save();
     }
 
-    const updatedPlaylist = await Playlist.findById(id).populate('videoIds');
+    const updatedPlaylist = await Playlist.findOne({
+      _id: id,
+      userId: req.user._id
+    }).populate('videoIds');
 
     res.json({
       success: true,
@@ -150,11 +165,15 @@ router.post('/:id/videos', async (req, res) => {
 });
 
 // Remove video from playlist
-router.delete('/:id/videos/:videoId', async (req, res) => {
+router.delete('/:id/videos/:videoId', authenticateToken, async (req, res) => {
   try {
     const { id, videoId } = req.params;
 
-    const playlist = await Playlist.findById(id);
+    const playlist = await Playlist.findOne({
+      _id: id,
+      userId: req.user._id
+    });
+    
     if (!playlist) {
       return res.status(404).json({ error: 'Playlist not found' });
     }
@@ -162,7 +181,10 @@ router.delete('/:id/videos/:videoId', async (req, res) => {
     playlist.videoIds = playlist.videoIds.filter(vid => vid.toString() !== videoId);
     await playlist.save();
 
-    const updatedPlaylist = await Playlist.findById(id).populate('videoIds');
+    const updatedPlaylist = await Playlist.findOne({
+      _id: id,
+      userId: req.user._id
+    }).populate('videoIds');
 
     res.json({
       success: true,

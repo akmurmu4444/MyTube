@@ -47,14 +47,11 @@ const videoSchema = new mongoose.Schema({
     trim: true
   }],
   
-  isLiked: {
-    type: Boolean,
-    default: false
-  },
-  
-  isPinned: {
-    type: Boolean,
-    default: false
+  // User who added this video
+  addedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
   },
   
   // Tracking
@@ -76,9 +73,8 @@ const videoSchema = new mongoose.Schema({
 });
 
 // Indexes for better query performance
+videoSchema.index({ addedBy: 1 });
 videoSchema.index({ tags: 1 });
-videoSchema.index({ isLiked: 1 });
-videoSchema.index({ isPinned: 1 });
 videoSchema.index({ addedAt: -1 });
 videoSchema.index({ title: 'text', description: 'text' });
 

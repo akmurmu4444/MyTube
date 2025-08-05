@@ -1,14 +1,15 @@
 import express from 'express';
 import Note from '../models/Note.js';
+import { authenticateToken } from '../middleware/auth.js';
 
 const router = express.Router();
 
 // Get all notes
-router.get('/', async (req, res) => {
+router.get('/', authenticateToken, async (req, res) => {
   try {
     const { videoId, search } = req.query;
     
-    let query = {};
+    let query = { userId: req.user._id };
     
     if (videoId) {
       query.videoId = videoId;
@@ -33,7 +34,7 @@ router.get('/', async (req, res) => {
 });
 
 // Create note
-router.post('/', async (req, res) => {
+router.post('/', authenticateToken, async (req, res) => {
   try {
     const { videoId, content, timestamp } = req.body;
     
@@ -42,6 +43,7 @@ router.post('/', async (req, res) => {
     }
 
     const note = new Note({
+      userId: req.user._id,
       videoId,
       content,
       timestamp
@@ -62,13 +64,13 @@ router.post('/', async (req, res) => {
 });
 
 // Update note
-router.put('/:id', async (req, res) => {
+router.put('/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
     const { content, timestamp } = req.body;
 
     const note = await Note.findByIdAndUpdate(
-      id,
+      { _id: id, userId: req.user._id },
       { content, timestamp },
       { new: true, runValidators: true }
     ).populate('videoId');
@@ -89,11 +91,14 @@ router.put('/:id', async (req, res) => {
 });
 
 // Delete note
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
 
-    const note = await Note.findByIdAndDelete(id);
+    const note = await Note.findOneAndDelete({
+      _id: id,
+      userId: req.user._id
+    });
     
     if (!note) {
       return res.status(404).json({ error: 'Note not found' });
@@ -106,6 +111,46 @@ router.delete('/:id', async (req, res) => {
   } catch (error) {
     console.error('Delete note error:', error.message);
     res.status(500).json({ error: 'Failed to delete note' });
+  }
+});
+
+// Get notes with video details (for My Notes page)
+router.get('/with-videos', authenticateToken, async (req, res) => {
+  try {
+    const { search, limit = 20, page = 1 } = req.query;
+    
+    let query = { userId: req.user._id };
+    
+    if (search) {
+      query.content = { $regex: search, $options: 'i' };
+    }
+
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    
+    const notes = await Note.find(query)
+      .populate({
+        path: 'videoId',
+        select: 'title thumbnail youtubeId channelTitle duration'
+      })
+      .sort({ createdAt: -1 })
+      .limit(parseInt(limit))
+      .skip(skip);
+
+    const total = await Note.countDocuments(query);
+
+    res.json({
+      success: true,
+      data: notes,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total,
+        pages: Math.ceil(total / parseInt(limit))
+      }
+    });
+  } catch (error) {
+    console.error('Get notes with videos error:', error.message);
+    res.status(500).json({ error: 'Failed to fetch notes with videos' });
   }
 });
 

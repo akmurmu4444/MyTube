@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Menu, Search, Plus, Moon, Sun } from 'lucide-react';
+import { Menu, Search, Plus, Moon, Sun, User, LogOut, Settings, Heart, Clock } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { RootState } from '../redux/store';
+import { RootState, useAppSelector, useAppDispatch } from '../redux/store';
 import { setSearchQuery } from '../redux/slices/videosSlice';
+import { logout } from '../redux/slices/authSlice';
 import { useTheme } from '../context/ThemeContext';
 import AddVideoModal from './AddVideoModal';
 
@@ -12,10 +14,15 @@ interface HeaderProps {
 
 const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [showUserMenu, setShowUserMenu] = useState(false);
   const [localSearch, setLocalSearch] = useState('');
-  const dispatch = useDispatch();
+  
+  const dispatch = useAppDispatch();
+  const navigate = useNavigate();
   const { isDark, toggleTheme } = useTheme();
+  
   const searchQuery = useSelector((state: RootState) => state.videos.searchQuery);
+  const { user, isAuthenticated } = useAppSelector(state => state.auth);
 
   // Debounced search
   useEffect(() => {
@@ -25,6 +32,17 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
 
     return () => clearTimeout(timer);
   }, [localSearch, dispatch]);
+
+  const handleLogout = () => {
+    dispatch(logout());
+    setShowUserMenu(false);
+    navigate('/');
+  };
+
+  const handleUserMenuClick = (path: string) => {
+    navigate(path);
+    setShowUserMenu(false);
+  };
 
   return (
     <>
@@ -64,21 +82,107 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
                 <Moon className="w-5 h-5 text-gray-600 dark:text-gray-300" />
               )}
             </button>
-            <button
-              onClick={() => setIsAddModalOpen(true)}
-              className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
-            >
-              <Plus className="w-4 h-4" />
-              <span className="hidden sm:inline">Add Video</span>
-            </button>
+            
+            {isAuthenticated ? (
+              <>
+                <button
+                  onClick={() => setIsAddModalOpen(true)}
+                  className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span className="hidden sm:inline">Add Video</span>
+                </button>
+                
+                <div className="relative">
+                  <button
+                    onClick={() => setShowUserMenu(!showUserMenu)}
+                    className="flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                  >
+                    {user?.avatar ? (
+                      <img
+                        src={user.avatar}
+                        alt={user.name}
+                        className="w-8 h-8 rounded-full"
+                      />
+                    ) : (
+                      <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
+                        <span className="text-white text-sm font-medium">
+                          {user?.name?.charAt(0).toUpperCase()}
+                        </span>
+                      </div>
+                    )}
+                  </button>
+                  
+                  {showUserMenu && (
+                    <div className="absolute right-0 top-full mt-2 w-56 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-2 z-50">
+                      <div className="px-4 py-2 border-b border-gray-200 dark:border-gray-700">
+                        <p className="font-medium text-gray-900 dark:text-white">{user?.name}</p>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">{user?.email}</p>
+                      </div>
+                      
+                      <button
+                        onClick={() => handleUserMenuClick('/watchlist')}
+                        className="w-full flex items-center space-x-3 px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                      >
+                        <Clock className="w-4 h-4 text-gray-600 dark:text-gray-300" />
+                        <span className="text-gray-900 dark:text-white">My Watchlist</span>
+                      </button>
+                      
+                      <button
+                        onClick={() => handleUserMenuClick('/liked')}
+                        className="w-full flex items-center space-x-3 px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                      >
+                        <Heart className="w-4 h-4 text-gray-600 dark:text-gray-300" />
+                        <span className="text-gray-900 dark:text-white">Liked Videos</span>
+                      </button>
+                      
+                      <button
+                        onClick={() => handleUserMenuClick('/stats')}
+                        className="w-full flex items-center space-x-3 px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                      >
+                        <Settings className="w-4 h-4 text-gray-600 dark:text-gray-300" />
+                        <span className="text-gray-900 dark:text-white">Settings & Stats</span>
+                      </button>
+                      
+                      <div className="border-t border-gray-200 dark:border-gray-700 mt-2 pt-2">
+                        <button
+                          onClick={handleLogout}
+                          className="w-full flex items-center space-x-3 px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-red-600 dark:text-red-400"
+                        >
+                          <LogOut className="w-4 h-4" />
+                          <span>Sign out</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </>
+            ) : (
+              <div className="flex items-center space-x-2">
+                <Link
+                  to="/login"
+                  className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-lg transition-colors"
+                >
+                  Sign in
+                </Link>
+                <Link
+                  to="/register"
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
+                >
+                  Sign up
+                </Link>
+              </div>
+            )}
           </div>
         </div>
       </header>
 
-      <AddVideoModal
-        isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
-      />
+      {isAuthenticated && (
+        <AddVideoModal
+          isOpen={isAddModalOpen}
+          onClose={() => setIsAddModalOpen(false)}
+        />
+      )}
     </>
   );
 };

@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState } from '../redux/store';
 import { updateNote, deleteNote } from '../redux/slices/notesSlice';
-import { StickyNote, Edit3, Trash2, Clock, Video } from 'lucide-react';
+import { StickyNote, Edit3, Trash2, Clock, Video, Play } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -108,20 +109,31 @@ const Notes: React.FC = () => {
                     <div className="flex-1">
                       {video && (
                         <div className="flex items-center space-x-3 mb-3">
-                          <img
-                            src={video.thumbnail}
-                            alt={video.title}
-                            className="w-12 h-8 object-cover rounded"
-                          />
+                          <Link to={`/video/${video.id}`} className="relative group">
+                            <img
+                              src={video.thumbnail}
+                              alt={video.title}
+                              className="w-16 h-12 object-cover rounded"
+                            />
+                            <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-opacity rounded flex items-center justify-center">
+                              <Play className="w-4 h-4 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                            </div>
+                          </Link>
                           <div>
-                            <h4 className="font-medium text-gray-900 dark:text-white">
+                            <Link 
+                              to={`/video/${video.id}`}
+                              className="font-medium text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                            >
                               {video.title}
-                            </h4>
+                            </Link>
                             {note.timestamp && (
-                              <div className="flex items-center space-x-1 text-sm text-gray-500 dark:text-gray-400">
+                              <Link 
+                                to={`/video/${video.id}?t=${note.timestamp}`}
+                                className="flex items-center space-x-1 text-sm text-blue-600 dark:text-blue-400 hover:underline"
+                              >
                                 <Clock className="w-3 h-3" />
                                 <span>{formatTimestamp(note.timestamp)}</span>
-                              </div>
+                              </Link>
                             )}
                           </div>
                         </div>
