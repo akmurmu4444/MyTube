@@ -189,7 +189,7 @@ router.post('/', authenticateToken, async (req, res) => {
 });
 
 // Update video
-router.put('/:id', authenticateToken, async (req, res) => {
+router.patch('/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
     const updates = req.body;

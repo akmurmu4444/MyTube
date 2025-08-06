@@ -81,6 +81,7 @@ export const updateVideoAsync = createAsyncThunk<
 >('videos/update', async ({ id, updates }, thunkAPI) => {
   try {
     const response = await videosAPI.update(id, updates);
+    console.log('Update updates:', updates);
     return response.data.data;
   } catch (error: any) {
     return thunkAPI.rejectWithValue(error.response?.data?.message || 'Failed to update video');

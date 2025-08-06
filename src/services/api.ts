@@ -69,6 +69,39 @@ export const youtubeAPI = {
 };
 
 // Video management endpoints
+type VideoUpdateFields = {
+  title?: string;
+  tags?: string[];
+  isLiked?: boolean;
+  pinned?: boolean;
+  notes?: string;
+  playlists?: string[];
+  // Add more fields as needed
+};
+
+const allowedFields: (keyof VideoUpdateFields)[] = [
+  'title',
+  'tags',
+  'isLiked',
+  'pinned',
+  'notes',
+  'playlists',
+  // extend this list as needed
+];
+
+export function sanitizeVideoUpdate(data: any): VideoUpdateFields {
+  const sanitized: Partial<VideoUpdateFields> = {};
+  console.log('Sanitizing video update data:', data);
+
+  for (const key of allowedFields) {
+    if (data.hasOwnProperty(key)) {
+      sanitized[key] = data[key];
+    }
+  }
+  console.log('Sanitized video update data:', sanitized);
+  return sanitized;
+}
+
 export const videosAPI = {
   getAll: (params?: {
     search?: string;
@@ -81,24 +114,26 @@ export const videosAPI = {
     page?: number;
   }) => api.get('/videos', { params }),
 
-  save: (data: { youtubeId: string; tags?: string[] }) =>
-    api.post('/videos', data),
-
-  update: (id: string, data: any) =>
-    api.put(`/videos/${id}`, data),
-
-  delete: (id: string) =>
-    api.delete(`/videos/${id}`),
-
   getById: (id: string) =>
     api.get(`/videos/${id}`),
 
-  toggleLike: (id: string) =>
-    api.patch(`/videos/${id}/like`),
+  save: (data: { youtubeId: string; tags?: string[] }) =>
+    api.post('/videos', data),
 
-  togglePin: (id: string) =>
-    api.patch(`/videos/${id}/pin`),
+  update: (id: string, data: Partial<{
+    title: string;
+    description: string;
+    tags: string[];
+    liked: boolean;
+    pinned: boolean;
+    notes: string;
+    playlists: string[];
+  }>) => api.patch(`/videos/${id}`, sanitizeVideoUpdate(data)),
+
+  delete: (id: string) =>
+    api.delete(`/videos/${id}`),
 };
+
 
 // Playlist endpoints
 export const playlistsAPI = {
