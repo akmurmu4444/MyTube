@@ -1,5 +1,6 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import Header from './components/Header';
 import Layout from './components/Layout';
 import Home from './pages/Home';
 import Watchlist from './pages/Watchlist';
@@ -15,8 +16,11 @@ import Register from './pages/Register';
 import AuthCallback from './pages/AuthCallback';
 import ProtectedRoute from './components/ProtectedRoute';
 import { ThemeProvider } from './context/ThemeContext';
+import { useAppSelector } from './redux/store';
 
 function App() {
+  const { isAuthenticated } = useAppSelector(state => state.auth);
+
   return (
     <ThemeProvider>
       <Router>
@@ -27,8 +31,13 @@ function App() {
             <Route path="/register" element={<Register />} />
             <Route path="/auth/callback" element={<AuthCallback />} />
             
-            {/* Video player (can be accessed by anyone) */}
-            <Route path="/video/:id" element={<VideoPlayer />} />
+            {/* Video player with header */}
+            <Route path="/video/:id" element={
+              <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+                <Header onMenuClick={() => {}} />
+                <VideoPlayer />
+              </div>
+            } />
             
             {/* Main app routes */}
             <Route path="/" element={<Layout />}>

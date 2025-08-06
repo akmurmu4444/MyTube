@@ -202,11 +202,11 @@ const TagBasedRecommendations: React.FC<TagBasedRecommendationsProps> = ({ onVid
                 key={video.youtubeId}
                 className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden hover:shadow-md transition-shadow"
               >
-                <div className="relative">
+                <div className="relative cursor-pointer">
                   <img
                     src={video.thumbnail}
                     alt={video.title}
-                    className="w-full h-36 object-cover"
+                    className="w-full h-36 object-cover aspect-video"
                   />
                   <div className="absolute bottom-2 right-2 bg-black bg-opacity-70 text-white px-2 py-1 rounded text-xs">
                     {formatDuration(video.duration)}
@@ -223,7 +223,10 @@ const TagBasedRecommendations: React.FC<TagBasedRecommendationsProps> = ({ onVid
                   </p>
                   
                   <button
-                    onClick={() => handleSaveVideo(video)}
+                    onClick={async (e) => {
+                      e.stopPropagation();
+                      await handleSaveVideo(video);
+                    }}
                     disabled={savingVideoId === video.youtubeId}
                     className="w-full flex items-center justify-center space-x-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-3 py-2 rounded-lg text-sm transition-colors"
                   >

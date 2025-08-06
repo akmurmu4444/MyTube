@@ -1,6 +1,8 @@
 import express from 'express';
 import Video from '../models/Video.js';
 import UserVideo from '../models/UserVideo.js';
+import Note from '../models/Note.js';
+import History from '../models/History.js';
 import youtubeService from '../services/youtubeService.js';
 import { authenticateToken, optionalAuth } from '../middleware/auth.js';
 

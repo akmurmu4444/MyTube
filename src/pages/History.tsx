@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState } from '../redux/store';
 import { clearHistory } from '../redux/slices/historySlice';
@@ -9,6 +10,7 @@ import { formatDistanceToNow, format, startOfDay, endOfDay, isWithinInterval } f
 const History: React.FC = () => {
   const [selectedPeriod, setSelectedPeriod] = useState<'all' | 'today' | 'week' | 'month'>('all');
   
+  const navigate = useNavigate();
   const dispatch = useDispatch();
   const { history, totalWatchTime } = useSelector((state: RootState) => state.history);
   const { videos, watchlist } = useSelector((state: RootState) => state.videos);
@@ -36,7 +38,7 @@ const History: React.FC = () => {
 
   const uniqueVideoIds = Array.from(new Set(filteredHistory.map(entry => entry.videoId)));
   const historyVideos = uniqueVideoIds
-    .map(videoId => videos.find(v => v.id === videoId))
+    .map(videoId => videos.find(v => v._id === videoId))
     .filter(video => video !== undefined);
 
   const formatWatchTime = (seconds: number): string => {
@@ -135,13 +137,14 @@ const History: React.FC = () => {
                 .sort((a, b) => new Date(b.watchedAt).getTime() - new Date(a.watchedAt).getTime())
                 .slice(0, 10)
                 .map(entry => {
-                  const video = videos.find(v => v.id === entry.videoId);
+                  const video = videos.find(v => v._id === entry.videoId);
                   if (!video) return null;
                   
                   return (
                     <div
                       key={entry.id}
-                      className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                      className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer"
+                      onClick={() => navigate(`/video/${video._id}`)}
                     >
                       <img
                         src={video.thumbnail}
@@ -173,20 +176,20 @@ const History: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {historyVideos
                 .sort((a, b) => {
-                  const aTime = getLastWatchedTime(a.id);
-                  const bTime = getLastWatchedTime(b.id);
+                  const aTime = getLastWatchedTime(a._id);
+                  const bTime = getLastWatchedTime(b._id);
                   if (!aTime || !bTime) return 0;
                   return new Date(bTime).getTime() - new Date(aTime).getTime();
                 })
                 .map(video => {
-                  const watchCount = getVideoWatchCount(video.id);
-                  const lastWatched = getLastWatchedTime(video.id);
+                  const watchCount = getVideoWatchCount(video._id);
+                  const lastWatched = getLastWatchedTime(video._id);
                   
                   return (
-                    <div key={video.id} className="relative">
+                    <div key={video._id} className="relative">
                       <VideoCard
                         video={video}
-                        isInWatchlist={watchlist.includes(video.id)}
+                        isInWatchlist={video.isInWatchlist}
                       />
                       <div className="absolute top-2 left-2 bg-black bg-opacity-70 text-white px-2 py-1 rounded text-xs">
                         Watched {watchCount} time{watchCount > 1 ? 's' : ''}

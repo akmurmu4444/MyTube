@@ -7,7 +7,7 @@ import { Heart } from 'lucide-react';
 const Liked: React.FC = () => {
   const { videos, liked, watchlist } = useSelector((state: RootState) => state.videos);
   
-  const likedVideos = videos.filter(video => liked.includes(video.id));
+  const likedVideos = videos.filter(video => video.isLiked);
 
   return (
     <div className="space-y-6">
@@ -37,9 +37,9 @@ const Liked: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {likedVideos.map(video => (
             <VideoCard
-              key={video.id}
+              key={video._id}
               video={video}
-              isInWatchlist={watchlist.includes(video.id)}
+              isInWatchlist={video.isInWatchlist}
             />
           ))}
         </div>

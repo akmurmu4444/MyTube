@@ -1,20 +1,24 @@
 import { createSlice, PayloadAction, createAsyncThunk } from '@reduxjs/toolkit';
 import { videosAPI } from '../../services/api';
+import toast from 'react-hot-toast';
 
 export interface Video {
-  id: string; // we'll keep this as youtubeId for now
+  _id: string;
   youtubeId: string;
   title: string;
-  url: string;
   thumbnail: string;
   duration?: string;
   description?: string;
+  channelTitle: string;
+  publishedAt: string;
   tags: string[];
   isLiked: boolean;
   isPinned: boolean;
+  isInWatchlist: boolean;
   addedAt: string;
   watchedAt?: string;
   watchCount: number;
+  likeCount?: number;
 }
 
 interface VideosState {
@@ -67,8 +71,10 @@ export const saveVideo = createAsyncThunk<
 >('videos/save', async (youtubeId, thunkAPI) => {
   try {
     const response = await videosAPI.save({ youtubeId });
+    toast.success('Video saved successfully!');
     return response.data.data;
   } catch (error: any) {
+    toast.error(error.response?.data?.message || 'Failed to save video');
     return thunkAPI.rejectWithValue(error.response?.data?.message || 'Failed to save video');
   }
 });
@@ -81,10 +87,43 @@ export const updateVideoAsync = createAsyncThunk<
 >('videos/update', async ({ id, updates }, thunkAPI) => {
   try {
     const response = await videosAPI.update(id, updates);
-    console.log('Update updates:', updates);
     return response.data.data;
   } catch (error: any) {
+    toast.error(error.response?.data?.message || 'Failed to update video');
     return thunkAPI.rejectWithValue(error.response?.data?.message || 'Failed to update video');
+  }
+});
+
+// Delete video
+export const deleteVideo = createAsyncThunk<
+  string,
+  string,
+  { rejectValue: string }
+>('videos/delete', async (id, thunkAPI) => {
+  try {
+    await videosAPI.delete(id);
+    toast.success('Video deleted successfully!');
+    return id;
+  } catch (error: any) {
+    toast.error(error.response?.data?.message || 'Failed to delete video');
+    return thunkAPI.rejectWithValue(error.response?.data?.message || 'Failed to delete video');
+  }
+});
+
+// Toggle like
+export const toggleLikeAsync = createAsyncThunk<
+  Video,
+  string,
+  { rejectValue: string }
+>('videos/toggleLike', async (id, thunkAPI) => {
+  try {
+    const response = await videosAPI.toggleLike(id);
+    const isLiked = response.data.data.isLiked;
+    toast.success(isLiked ? 'Added to liked videos!' : 'Removed from liked videos!');
+    return response.data.data;
+  } catch (error: any) {
+    toast.error(error.response?.data?.message || 'Failed to update like status');
+    return thunkAPI.rejectWithValue(error.response?.data?.message || 'Failed to update like status');
   }
 });
 
@@ -118,18 +157,18 @@ const videosSlice = createSlice({
       state.sortOrder = action.payload;
     },
     toggleLike: (state, action: PayloadAction<string>) => {
-      const video = state.videos.find(v => v.id === action.payload);
+      const video = state.videos.find(v => v._id === action.payload);
       if (video) {
         video.isLiked = !video.isLiked;
         if (video.isLiked) {
-          if (!state.liked.includes(video.id)) state.liked.push(video.id);
+          if (!state.liked.includes(video._id)) state.liked.push(video._id);
         } else {
-          state.liked = state.liked.filter(id => id !== video.id);
+          state.liked = state.liked.filter(id => id !== video._id);
         }
       }
     },
     togglePin: (state, action: PayloadAction<string>) => {
-      const video = state.videos.find(v => v.id === action.payload);
+      const video = state.videos.find(v => v._id === action.payload);
       if (video) video.isPinned = !video.isPinned;
     },
     addToWatchlist: (state, action: PayloadAction<string>) => {
@@ -141,7 +180,7 @@ const videosSlice = createSlice({
       state.watchlist = state.watchlist.filter(id => id !== action.payload);
     },
     removeVideo: (state, action: PayloadAction<string>) => {
-      state.videos = state.videos.filter(v => v.id !== action.payload);
+      state.videos = state.videos.filter(v => v._id !== action.payload);
       state.watchlist = state.watchlist.filter(id => id !== action.payload);
       state.liked = state.liked.filter(id => id !== action.payload);
     },
@@ -173,10 +212,7 @@ const videosSlice = createSlice({
       })
       .addCase(saveVideo.fulfilled, (state, action) => {
         state.loading = false;
-        state.videos.push({
-          ...action.payload,
-          id: action.payload.youtubeId, // use youtubeId as id
-        });
+        state.videos.unshift(action.payload);
       })
       .addCase(saveVideo.rejected, (state, action) => {
         state.loading = false;
@@ -185,12 +221,10 @@ const videosSlice = createSlice({
     // Update video
     builder
       .addCase(updateVideoAsync.pending, (state) => {
-        state.loading = true;
         state.error = null;
       })
       .addCase(updateVideoAsync.fulfilled, (state, action) => {
-        state.loading = false;
-        const idx = state.videos.findIndex(v => v.id === action.payload.youtubeId);
+        const idx = state.videos.findIndex(v => v._id === action.payload._id);
         if (idx !== -1) {
           state.videos[idx] = {
             ...state.videos[idx],
@@ -199,8 +233,51 @@ const videosSlice = createSlice({
         }
       })
       .addCase(updateVideoAsync.rejected, (state, action) => {
-        state.loading = false;
         state.error = action.payload || 'Failed to update video';
+      });
+    // Delete video
+    builder
+      .addCase(deleteVideo.pending, (state) => {
+        state.error = null;
+      })
+      .addCase(deleteVideo.fulfilled, (state, action) => {
+        state.videos = state.videos.filter(v => v._id !== action.payload);
+        state.watchlist = state.watchlist.filter(id => id !== action.payload);
+        state.liked = state.liked.filter(id => id !== action.payload);
+      })
+      .addCase(deleteVideo.rejected, (state, action) => {
+        state.error = action.payload || 'Failed to delete video';
+      });
+    // Toggle like
+    builder
+      .addCase(toggleLikeAsync.pending, (state) => {
+        state.error = null;
+      })
+      .addCase(toggleLikeAsync.fulfilled, (state, action) => {
+        const idx = state.videos.findIndex(v => v._id === action.payload._id);
+        if (idx !== -1) {
+          state.videos[idx] = {
+            ...state.videos[idx],
+            ...action.payload,
+          };
+        }
+      })
+      .addCase(toggleLikeAsync.rejected, (state, action) => {
+        state.error = action.payload || 'Failed to toggle like';
+      });
+    // Load saved videos
+    builder
+      .addCase(loadSavedVideos.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(loadSavedVideos.fulfilled, (state, action) => {
+        state.loading = false;
+        state.videos = action.payload;
+      })
+      .addCase(loadSavedVideos.rejected, (state, action) => {
+        state.loading = false;
+        state.error = 'Failed to load videos';
       });
   },
 });

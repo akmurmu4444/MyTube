@@ -132,6 +132,15 @@ export const videosAPI = {
 
   delete: (id: string) =>
     api.delete(`/videos/${id}`),
+
+  toggleLike: (id: string) =>
+    api.patch(`/videos/${id}/like`),
+
+  togglePin: (id: string) =>
+    api.patch(`/videos/${id}/pin`),
+
+  toggleWatchlist: (id: string) =>
+    api.patch(`/videos/${id}/watchlist`),
 };
 
 

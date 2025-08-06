@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { Sparkles, Search, Video as VideoIcon } from 'lucide-react';
+import { Sparkles, Search, Video as VideoIcon, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import YouTubeSearch from '../components/YouTubeSearch';
 import TagBasedRecommendations from '../components/TagBasedRecommendations';
 import { useAppDispatch, useAppSelector } from '../redux/store';
-import { loadSavedVideos, addVideo } from '../redux/slices/videosSlice';
+import { loadSavedVideos, addVideo, deleteVideo } from '../redux/slices/videosSlice';
 
 const Home: React.FC = () => {
   const dispatch = useAppDispatch();
@@ -136,6 +136,22 @@ const Home: React.FC = () => {
                         <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
                           <span>{video.watchCount > 0 ? `Watched ${video.watchCount}x` : 'Not watched'}</span>
                           {video.isLiked && <span>❤️</span>}
+                        </div>
+                        
+                        {/* Delete button for user's own videos */}
+                        <div className="mt-3 flex justify-end">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (confirm('Are you sure you want to delete this video?')) {
+                                dispatch(deleteVideo(video._id) as any);
+                              }
+                            }}
+                            className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 text-xs flex items-center space-x-1 transition-colors"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                            <span>Delete</span>
+                          </button>
                         </div>
                       </div>
                     </div>

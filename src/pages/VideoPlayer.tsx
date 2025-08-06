@@ -1,94 +1,110 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useSelector, useDispatch } from 'react-redux';
-import { AppDispatch, RootState, useAppSelector } from '../redux/store';
-import { updateVideoAsync } from '../redux/slices/videosSlice';
+import { useDispatch } from 'react-redux';
+import { Helmet } from 'react-helmet-async';
+import { AppDispatch, useAppSelector } from '../redux/store';
+import { updateVideoAsync, toggleLikeAsync } from '../redux/slices/videosSlice';
 import { addHistoryEntry, updateWatchPosition } from '../redux/slices/historySlice';
 import { addNote } from '../redux/slices/notesSlice';
+import { videosAPI, notesAPI, historyAPI } from '../services/api';
 import {
   ArrowLeft,
   Heart,
   Clock,
   Pin,
   StickyNote,
-  Minimize,
-  Maximize,
-  Volume2,
-  VolumeX,
-  Play,
-  Pause,
   ThumbsUp,
   Share,
-  Download,
   MoreHorizontal,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Trash2
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { formatDistanceToNow } from 'date-fns';
+import toast from 'react-hot-toast';
 
 const VideoPlayer: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  // console.log('Video ID:', id);
   const navigate = useNavigate();
   const dispatch = useDispatch<AppDispatch>();
 
-  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [video, setVideo] = useState<any>(null);
+  const [videoNotes, setVideoNotes] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [showNoteForm, setShowNoteForm] = useState(false);
   const [noteContent, setNoteContent] = useState('');
   const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(0);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [volume, setVolume] = useState(1);
-  const [isMuted, setIsMuted] = useState(false);
   const [showDescription, setShowDescription] = useState(false);
 
-  const iframeRef = useRef<HTMLIFrameElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
+  const { isAuthenticated } = useAppSelector(state => state.auth);
 
-  const video = useAppSelector(state =>
-    state.videos.videos.find(v => v._id === id)
-  );
-  // console.log('Selected Video:', video);
-  const notes = useAppSelector(state => state.notes.notes);
-
-  const { watchlist } = useSelector((state: RootState) => state.videos);
-
+  // Load video data
   useEffect(() => {
-    if (video) {
-      // Update watch count
-      dispatch(updateVideoAsync({
-        id: video._id,
-        updates: {
-          watchCount: video.watchCount + 1,
-          watchedAt: new Date().toISOString()
+    const loadVideo = async () => {
+      if (!id) return;
+      
+      try {
+        setLoading(true);
+        const response = await videosAPI.getById(id);
+        setVideo(response.data.data);
+        
+        // Load notes for this video if authenticated
+        if (isAuthenticated) {
+          const notesResponse = await notesAPI.getAll({ videoId: id });
+          setVideoNotes(notesResponse.data.data || []);
         }
-      }));
+      } catch (error: any) {
+        console.error('Failed to load video:', error);
+        toast.error('Failed to load video');
+      } finally {
+        setLoading(false);
+      }
+    };
 
-      // Add to history (mock duration for now)
-      dispatch(addHistoryEntry({
+    loadVideo();
+  }, [id, isAuthenticated]);
+
+  // Add to history when video loads
+  useEffect(() => {
+    if (video && isAuthenticated) {
+      // Add to history
+      historyAPI.add({
         videoId: video._id,
-        duration: 300, // 5 minutes mock duration
+        duration: 300, // Mock duration
         position: 0
-      }));
+      }).catch(console.error);
     }
-  }, [video, dispatch]);
+  }, [video, isAuthenticated]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
 
   if (!video) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
-        <div className="text-center">
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">Video not found</h2>
-          <p className="text-gray-600 dark:text-gray-400 mb-4">The video you're looking for doesn't exist.</p>
-          <button
-            onClick={() => navigate('/')}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
-          >
-            Back to Home
-          </button>
+      <>
+        <Helmet>
+          <title>Video not found - MyTube</title>
+        </Helmet>
+        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+          <div className="text-center">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">Video not found</h2>
+            <p className="text-gray-600 dark:text-gray-400 mb-4">The video you're looking for doesn't exist.</p>
+            <button
+              onClick={() => navigate('/')}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
+            >
+              Back to Home
+            </button>
+          </div>
         </div>
-      </div>
+      </>
     );
   }
 
@@ -96,42 +112,65 @@ const VideoPlayer: React.FC = () => {
     return `https://www.youtube.com/embed/${video.youtubeId}?enablejsapi=1&origin=${window.location.origin}&autoplay=1`;
   };
 
-  const toggleFullscreen = () => {
-    if (!document.fullscreenElement && containerRef.current) {
-      containerRef.current.requestFullscreen();
-      setIsFullscreen(true);
-    } else if (document.exitFullscreen) {
-      document.exitFullscreen();
-      setIsFullscreen(false);
+  const handleLike = async () => {
+    if (!isAuthenticated) {
+      toast.error('Please login to like videos');
+      return;
+    }
+    
+    try {
+      const response = await videosAPI.toggleLike(video._id);
+      setVideo({ ...video, ...response.data.data });
+    } catch (error: any) {
+      toast.error('Failed to update like status');
     }
   };
 
-  const handleLike = () => {
-    dispatch(updateVideoAsync({
-      id: video._id,
-      updates: { isLiked: !video.isLiked }
-    }));
+  const handlePin = async () => {
+    if (!isAuthenticated) {
+      toast.error('Please login to pin videos');
+      return;
+    }
+    
+    try {
+      const response = await videosAPI.togglePin(video._id);
+      setVideo({ ...video, ...response.data.data });
+      toast.success(video.isPinned ? 'Video unpinned' : 'Video pinned');
+    } catch (error: any) {
+      toast.error('Failed to update pin status');
+    }
   };
 
-  const handlePin = () => {
-    dispatch(updateVideoAsync({
-      id: video._id,
-      updates: { isPinned: !video.isPinned }
-    }));
-  };
-
-  const handleAddNote = (e: React.FormEvent) => {
+  const handleAddNote = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!noteContent.trim()) return;
+    if (!noteContent.trim() || !isAuthenticated) return;
 
-    dispatch(addNote({
-      videoId: video._id,
-      content: noteContent.trim(),
-      timestamp: Math.floor(currentTime)
-    }));
+    try {
+      const response = await notesAPI.create({
+        videoId: video._id,
+        content: noteContent.trim(),
+        timestamp: Math.floor(currentTime)
+      });
+      
+      setVideoNotes([response.data.data, ...videoNotes]);
+      toast.success('Note added successfully!');
+      setNoteContent('');
+      setShowNoteForm(false);
+    } catch (error: any) {
+      toast.error('Failed to add note');
+    }
+  };
 
-    setNoteContent('');
-    setShowNoteForm(false);
+  const handleDeleteNote = async (noteId: string) => {
+    if (!confirm('Are you sure you want to delete this note?')) return;
+    
+    try {
+      await notesAPI.delete(noteId);
+      setVideoNotes(videoNotes.filter(note => note._id !== noteId));
+      toast.success('Note deleted successfully!');
+    } catch (error: any) {
+      toast.error('Failed to delete note');
+    }
   };
 
   const formatTime = (seconds: number): string => {
@@ -156,29 +195,22 @@ const VideoPlayer: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <>
+      <Helmet>
+        <title>{video.title} - MyTube</title>
+        <meta name="description" content={video.description || `Watch ${video.title} on MyTube`} />
+      </Helmet>
+      
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
-          <button
-            onClick={() => navigate(-1)}
-            className="flex items-center space-x-2 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors"
-          >
-            <ArrowLeft className="w-5 h-5" />
-            <span>Back</span>
-          </button>
-        </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 p-6">
           {/* Main Video Section */}
           <div className="lg:col-span-2 space-y-4">
             {/* Video Player */}
             <div
-              ref={containerRef}
               className="relative bg-black rounded-lg overflow-hidden aspect-video"
             >
               <iframe
-                ref={iframeRef}
                 src={getEmbedUrl()}
                 title={video.title}
                 className="w-full h-full"
@@ -197,55 +229,63 @@ const VideoPlayer: React.FC = () => {
             {/* Video Stats and Actions */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-gray-200 dark:border-gray-700">
               <div className="flex items-center space-x-4 text-sm text-gray-600 dark:text-gray-400">
-                <span>{formatNumber(video.watchCount)} views</span>
+                <span>{formatNumber(video.watchCount || 0)} views</span>
                 <span>•</span>
                 <span>{formatDistanceToNow(new Date(video.addedAt))} ago</span>
+                {video.likeCount && (
+                  <>
+                    <span>•</span>
+                    <span>{formatNumber(video.likeCount)} likes</span>
+                  </>
+                )}
               </div>
 
-              <div className="flex items-center space-x-2">
-                <button
-                  onClick={handleLike}
-                  className={`flex items-center space-x-2 px-4 py-2 rounded-full transition-colors ${video.isLiked
-                    ? 'bg-red-100 dark:bg-red-900 text-red-600 dark:text-red-400'
-                    : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                    }`}
-                >
-                  <ThumbsUp className={`w-4 h-4 ${video.isLiked ? 'fill-current' : ''}`} />
-                  <span className="text-sm font-medium">
-                    {video.isLiked ? 'Liked' : 'Like'}
-                  </span>
-                </button>
+              {isAuthenticated && (
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={handleLike}
+                    className={`flex items-center space-x-2 px-4 py-2 rounded-full transition-colors ${video.isLiked
+                      ? 'bg-red-100 dark:bg-red-900 text-red-600 dark:text-red-400'
+                      : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                      }`}
+                  >
+                    <Heart className={`w-4 h-4 ${video.isLiked ? 'fill-current' : ''}`} />
+                    <span className="text-sm font-medium">
+                      {video.isLiked ? 'Liked' : 'Like'}
+                    </span>
+                  </button>
 
-                <button className="flex items-center space-x-2 px-4 py-2 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
-                  <Share className="w-4 h-4" />
-                  <span className="text-sm font-medium">Share</span>
-                </button>
+                  <button className="flex items-center space-x-2 px-4 py-2 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
+                    <Share className="w-4 h-4" />
+                    <span className="text-sm font-medium">Share</span>
+                  </button>
 
-                <button
-                  onClick={handlePin}
-                  className={`flex items-center space-x-2 px-4 py-2 rounded-full transition-colors ${video.isPinned
-                    ? 'bg-yellow-100 dark:bg-yellow-900 text-yellow-600 dark:text-yellow-400'
-                    : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                    }`}
-                >
-                  <Pin className="w-4 h-4" />
-                  <span className="text-sm font-medium">
-                    {video.isPinned ? 'Pinned' : 'Pin'}
-                  </span>
-                </button>
+                  <button
+                    onClick={handlePin}
+                    className={`flex items-center space-x-2 px-4 py-2 rounded-full transition-colors ${video.isPinned
+                      ? 'bg-yellow-100 dark:bg-yellow-900 text-yellow-600 dark:text-yellow-400'
+                      : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                      }`}
+                  >
+                    <Pin className="w-4 h-4" />
+                    <span className="text-sm font-medium">
+                      {video.isPinned ? 'Pinned' : 'Pin'}
+                    </span>
+                  </button>
 
-                <button
-                  onClick={() => setShowNoteForm(true)}
-                  className="flex items-center space-x-2 px-4 py-2 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-                >
-                  <StickyNote className="w-4 h-4" />
-                  <span className="text-sm font-medium">Note</span>
-                </button>
+                  <button
+                    onClick={() => setShowNoteForm(true)}
+                    className="flex items-center space-x-2 px-4 py-2 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                  >
+                    <StickyNote className="w-4 h-4" />
+                    <span className="text-sm font-medium">Note</span>
+                  </button>
 
-                <button className="p-2 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
-                  <MoreHorizontal className="w-4 h-4" />
-                </button>
-              </div>
+                  <button className="p-2 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
+                    <MoreHorizontal className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Channel Info and Description */}
@@ -253,16 +293,16 @@ const VideoPlayer: React.FC = () => {
               <div className="flex items-start space-x-4">
                 <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center">
                   <span className="text-white font-bold text-sm">
-                    {video.title.charAt(0).toUpperCase()}
+                    {video.channelTitle?.charAt(0).toUpperCase() || 'V'}
                   </span>
                 </div>
 
                 <div className="flex-1">
                   <h3 className="font-semibold text-gray-900 dark:text-white">
-                    {video.title.split(' ').slice(0, 3).join(' ')} Channel
+                    {video.channelTitle || 'Unknown Channel'}
                   </h3>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
-                    Personal Collection
+                    {video.publishedAt && `Published ${formatDistanceToNow(new Date(video.publishedAt))} ago`}
                   </p>
                 </div>
               </div>
@@ -311,52 +351,61 @@ const VideoPlayer: React.FC = () => {
 
           {/* Sidebar */}
           <div className="space-y-6">
-            {/* Notes Section */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg p-4">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                  Notes ({notes.length})
-                </h3>
-                <button
-                  onClick={() => setShowNoteForm(true)}
-                  className="bg-blue-600 hover:bg-blue-700 text-white p-2 rounded-lg transition-colors"
-                >
-                  <StickyNote className="w-4 h-4" />
-                </button>
-              </div>
+            {isAuthenticated && (
+              /* Notes Section */
+              <div className="bg-white dark:bg-gray-800 rounded-lg p-4">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                    Notes ({videoNotes.length})
+                  </h3>
+                  <button
+                    onClick={() => setShowNoteForm(true)}
+                    className="bg-blue-600 hover:bg-blue-700 text-white p-2 rounded-lg transition-colors"
+                  >
+                    <StickyNote className="w-4 h-4" />
+                  </button>
+                </div>
 
-              <div className="space-y-3 max-h-96 overflow-y-auto">
-                {notes.length === 0 ? (
-                  <p className="text-gray-500 dark:text-gray-400 text-sm text-center py-4">
-                    No notes yet. Add your first note!
-                  </p>
-                ) : (
-                  notes
-                    .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
-                    .map(note => (
-                      <div
-                        key={note.id}
-                        className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3"
-                      >
-                        {note.timestamp && (
-                          <div className="flex items-center space-x-1 text-xs text-gray-500 dark:text-gray-400 mb-2">
-                            <Clock className="w-3 h-3" />
-                            <span>{formatTime(note.timestamp)}</span>
+                <div className="space-y-3 max-h-96 overflow-y-auto">
+                  {videoNotes.length === 0 ? (
+                    <p className="text-gray-500 dark:text-gray-400 text-sm text-center py-4">
+                      No notes yet. Add your first note!
+                    </p>
+                  ) : (
+                    videoNotes
+                      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                      .map(note => (
+                        <div
+                          key={note._id}
+                          className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3 relative group"
+                        >
+                          <button
+                            onClick={() => handleDeleteNote(note._id)}
+                            className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-700 transition-opacity"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                          
+                          {note.timestamp && (
+                            <div className="flex items-center space-x-1 text-xs text-gray-500 dark:text-gray-400 mb-2">
+                              <Clock className="w-3 h-3" />
+                              <span>{formatTime(note.timestamp)}</span>
+                            </div>
+                          )}
+                          <div className="prose prose-sm prose-gray dark:prose-invert max-w-none">
+                            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                              {note.content}
+                            </ReactMarkdown>
                           </div>
-                        )}
-                        <div className="prose prose-sm prose-gray dark:prose-invert max-w-none">
-                          <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                            {note.content}
-                          </ReactMarkdown>
+                          <div className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                            {formatDistanceToNow(new Date(note.createdAt))} ago
+                          </div>
                         </div>
-                        <div className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                          {formatDistanceToNow(new Date(note.createdAt))} ago
-                        </div>
-                      </div>
-                    ))
-                )}
+                      ))
+                  )}
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Video Stats */}
             <div className="bg-white dark:bg-gray-800 rounded-lg p-4">
@@ -367,7 +416,7 @@ const VideoPlayer: React.FC = () => {
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-gray-600 dark:text-gray-400">Watch Count</span>
                   <span className="font-medium text-gray-900 dark:text-white">
-                    {video.watchCount}
+                    {video.watchCount || 0}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
@@ -376,28 +425,30 @@ const VideoPlayer: React.FC = () => {
                     {formatDistanceToNow(new Date(video.addedAt))} ago
                   </span>
                 </div>
-                {video.watchedAt && (
+                {video.lastWatchedAt && (
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-gray-600 dark:text-gray-400">Last Watched</span>
                     <span className="font-medium text-gray-900 dark:text-white">
-                      {formatDistanceToNow(new Date(video.watchedAt))} ago
+                      {formatDistanceToNow(new Date(video.lastWatchedAt))} ago
                     </span>
                   </div>
                 )}
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600 dark:text-gray-400">Status</span>
-                  <div className="flex items-center space-x-2">
-                    {video.isLiked && (
-                      <span className="text-red-500 text-xs">❤️ Liked</span>
-                    )}
-                    {video.isPinned && (
-                      <span className="text-yellow-500 text-xs">📌 Pinned</span>
-                    )}
-                    {!video.isLiked && !video.isPinned && (
-                      <span className="text-gray-500 dark:text-gray-400 text-xs">Normal</span>
-                    )}
+                {isAuthenticated && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600 dark:text-gray-400">Status</span>
+                    <div className="flex items-center space-x-2">
+                      {video.isLiked && (
+                        <span className="text-red-500 text-xs">❤️ Liked</span>
+                      )}
+                      {video.isPinned && (
+                        <span className="text-yellow-500 text-xs">📌 Pinned</span>
+                      )}
+                      {!video.isLiked && !video.isPinned && (
+                        <span className="text-gray-500 dark:text-gray-400 text-xs">Normal</span>
+                      )}
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             </div>
           </div>
@@ -405,7 +456,7 @@ const VideoPlayer: React.FC = () => {
       </div>
 
       {/* Note Form Modal */}
-      {showNoteForm && (
+      {showNoteForm && isAuthenticated && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
           <div className="w-full max-w-md mx-4 bg-white dark:bg-gray-800 rounded-lg p-6">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Add Note</h3>
@@ -441,7 +492,7 @@ const VideoPlayer: React.FC = () => {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 };
 

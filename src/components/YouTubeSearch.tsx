@@ -64,10 +64,11 @@ const YouTubeSearch: React.FC<YouTubeSearchProps> = ({ onVideoSaved }) => {
         onVideoSaved(response.data.data);
       }
 
-      // Show success feedback
-      console.log('✅ Video saved successfully');
+      // Navigate to video player after saving
+      setTimeout(() => {
+        navigate(`/video/${response.data.data._id}`);
+      }, 1000);
     } catch (err: any) {
-      console.error('❌ Failed to save video:', err.response?.data?.message);
       setError(err.response?.data?.message || 'Failed to save video');
     } finally {
       setSavingVideoId(null);
@@ -138,11 +139,11 @@ const YouTubeSearch: React.FC<YouTubeSearchProps> = ({ onVideoSaved }) => {
                 key={video.youtubeId}
                 className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden hover:shadow-md transition-shadow"
               >
-                <div className="relative" onClick={() => navigate(`/video/${video._id}`)}>
+                <div className="relative cursor-pointer">
                   <img
                     src={video.thumbnail}
                     alt={video.title}
-                    className="w-full h-32 object-cover"
+                    className="w-full h-32 object-cover aspect-video"
                   />
                   <div className="absolute bottom-2 right-2 bg-black bg-opacity-70 text-white px-2 py-1 rounded text-xs">
                     {formatDuration(video.duration)}
@@ -176,7 +177,10 @@ const YouTubeSearch: React.FC<YouTubeSearchProps> = ({ onVideoSaved }) => {
                   )}
 
                   <button
-                    onClick={() => handleSaveVideo(video)}
+                    onClick={async (e) => {
+                      e.stopPropagation();
+                      await handleSaveVideo(video);
+                    }}
                     disabled={savingVideoId === video.youtubeId}
                     className="w-full flex items-center justify-center space-x-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-3 py-2 rounded-lg text-sm transition-colors"
                   >
@@ -211,5 +215,3 @@ const YouTubeSearch: React.FC<YouTubeSearchProps> = ({ onVideoSaved }) => {
     </div>
   );
 };
-
-export default YouTubeSearch;
