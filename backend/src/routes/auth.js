@@ -2,6 +2,8 @@ import express from 'express';
 import passport from 'passport';
 import User from '../models/User.js';
 import { generateToken, generateRefreshToken, authenticateToken } from '../middleware/auth.js';
+import dotenv from 'dotenv';
+dotenv.config();
 
 const router = express.Router();
 

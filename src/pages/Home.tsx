@@ -15,7 +15,7 @@ const Home: React.FC = () => {
 
   // Redux state
   const { videos: savedVideos, loading, error } = useAppSelector(state => state.videos);
-  console.log('Saved Videos:', savedVideos);
+  // console.log('Saved Videos:', savedVideos);
 
   // Load saved videos on mount
   useEffect(() => {

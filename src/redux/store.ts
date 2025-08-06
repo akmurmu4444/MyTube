@@ -23,8 +23,8 @@ const rootReducer = combineReducers({
 const persistConfig = {
   key: 'root',
   storage,
-  whitelist: ['auth'], // Only persist auth state
-  blacklist: ['videos', 'playlists', 'notes', 'history'] // Don't persist these (fetch fresh)
+  whitelist: ['auth', 'videos', 'playlists', 'notes', 'history'], // Only persist auth state
+  blacklist: [] // Don't persist these (fetch fresh)
 };
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);

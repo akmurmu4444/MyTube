@@ -193,6 +193,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
     const updates = req.body;
+    console.log('Update video:', updates);
 
     // Remove fields that shouldn't be updated directly
     delete updates.youtubeId;

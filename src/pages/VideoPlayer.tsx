@@ -30,7 +30,7 @@ import { formatDistanceToNow } from 'date-fns';
 
 const VideoPlayer: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  console.log('Video ID:', id);
+  // console.log('Video ID:', id);
   const navigate = useNavigate();
   const dispatch = useDispatch<AppDispatch>();
 
@@ -50,7 +50,7 @@ const VideoPlayer: React.FC = () => {
   const video = useAppSelector(state =>
     state.videos.videos.find(v => v._id === id)
   );
-  console.log('Selected Video:', video);
+  // console.log('Selected Video:', video);
   const notes = useAppSelector(state => state.notes.notes);
 
   const { watchlist } = useSelector((state: RootState) => state.videos);
