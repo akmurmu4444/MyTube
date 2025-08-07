@@ -1,6 +1,5 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import Header from './components/Header';
 import Layout from './components/Layout';
 import Home from './pages/Home';
 import Watchlist from './pages/Watchlist';
@@ -16,31 +15,35 @@ import Register from './pages/Register';
 import AuthCallback from './pages/AuthCallback';
 import ProtectedRoute from './components/ProtectedRoute';
 import { ThemeProvider } from './context/ThemeContext';
-import { useAppSelector } from './redux/store';
+import { useAppSelector, useAppDispatch } from './redux/store';
+import { useEffect } from 'react';
+import { getCurrentUser } from './redux/slices/authSlice';
 
 function App() {
-  const { isAuthenticated } = useAppSelector(state => state.auth);
+  const { isAuthenticated, token } = useAppSelector(state => state.auth);
+  const dispatch = useAppDispatch();
+
+  // Initialize user session if token exists
+  useEffect(() => {
+    if (token && !isAuthenticated) {
+      dispatch(getCurrentUser());
+    }
+  }, [token, isAuthenticated, dispatch]);
 
   return (
     <ThemeProvider>
       <Router>
-        <div className="App">
+        <div className="App min-h-screen bg-gray-50 dark:bg-gray-900">
           <Routes>
             {/* Public routes */}
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/auth/callback" element={<AuthCallback />} />
             
-            {/* Video player with header */}
-            <Route path="/video/:id" element={
-              <Layout>
-                <VideoPlayer />
-              </Layout>
-            } />
-            
-            {/* Main app routes */}
+            {/* All other routes use Layout wrapper */}
             <Route path="/" element={<Layout />}>
               <Route index element={<Home />} />
+              <Route path="video/:id" element={<VideoPlayer />} />
               
               {/* Protected routes */}
               <Route path="watchlist" element={

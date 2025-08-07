@@ -35,7 +35,10 @@ api.interceptors.request.use(
 // Request interceptor for logging
 api.interceptors.request.use(
   (config) => {
-    console.log(`🚀 API Request: ${config.method?.toUpperCase()} ${config.url}`);
+    // Only log in development
+    if (import.meta.env.DEV) {
+      console.log(`🚀 API Request: ${config.method?.toUpperCase()} ${config.url}`);
+    }
     return config;
   },
   (error) => {
@@ -47,11 +50,16 @@ api.interceptors.request.use(
 // Response interceptor for error handling
 api.interceptors.response.use(
   (response) => {
-    console.log(`✅ API Response: ${response.status} ${response.config.url}`);
+    // Only log in development
+    if (import.meta.env.DEV) {
+      console.log(`✅ API Response: ${response.status} ${response.config.url}`);
+    }
     return response;
   },
   (error) => {
-    console.error('❌ API Response Error:', error.response?.data || error.message);
+    if (import.meta.env.DEV) {
+      console.error('❌ API Response Error:', error.response?.data || error.message);
+    }
     return Promise.reject(error);
   }
 );

@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
 import { Helmet } from 'react-helmet-async';
 import { AppDispatch, useAppSelector } from '../redux/store';
-import { updateVideoAsync, toggleLikeAsync } from '../redux/slices/videosSlice';
+import { updateVideoAsync, toggleLikeAsync, ensureVideoLoaded } from '../redux/slices/videosSlice';
 import { addHistoryEntry, updateWatchPosition } from '../redux/slices/historySlice';
 import { addNote } from '../redux/slices/notesSlice';
 import { videosAPI, notesAPI, historyAPI } from '../services/api';
@@ -39,6 +39,7 @@ const VideoPlayer: React.FC = () => {
   const [showDescription, setShowDescription] = useState(false);
 
   const { isAuthenticated } = useAppSelector(state => state.auth);
+  const { videos } = useAppSelector(state => state.videos);
 
   // Load video data
   useEffect(() => {
@@ -47,24 +48,45 @@ const VideoPlayer: React.FC = () => {
       
       try {
         setLoading(true);
-        const response = await videosAPI.getById(id);
-        setVideo(response.data.data);
+        
+        // First try to get video from Redux store
+        const existingVideo = videos.find(v => v._id === id);
+        if (existingVideo) {
+          setVideo(existingVideo);
+        } else {
+          // If not in store, fetch from API and add to store
+          const result = await dispatch(ensureVideoLoaded(id));
+          if (ensureVideoLoaded.fulfilled.match(result)) {
+            setVideo(result.payload);
+          } else {
+            throw new Error(result.payload as string);
+          }
+        }
         
         // Load notes for this video if authenticated
         if (isAuthenticated) {
-          const notesResponse = await notesAPI.getAll({ videoId: id });
-          setVideoNotes(notesResponse.data.data || []);
+          try {
+            const notesResponse = await notesAPI.getAll({ videoId: id });
+            setVideoNotes(notesResponse.data.data || []);
+          } catch (notesError) {
+            console.warn('Failed to load notes:', notesError);
+            setVideoNotes([]);
+          }
         }
       } catch (error: any) {
         console.error('Failed to load video:', error);
-        toast.error('Failed to load video');
+        if (error.response?.status === 404) {
+          toast.error('Video not found');
+        } else {
+          toast.error('Failed to load video');
+        }
       } finally {
         setLoading(false);
       }
     };
 
     loadVideo();
-  }, [id, isAuthenticated]);
+  }, [id, isAuthenticated, dispatch, videos]);
 
   // Add to history when video loads
   useEffect(() => {
@@ -80,7 +102,7 @@ const VideoPlayer: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+      <div className="flex items-center justify-center py-12">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
       </div>
     );
@@ -92,7 +114,7 @@ const VideoPlayer: React.FC = () => {
         <Helmet>
           <title>Video not found - MyTube</title>
         </Helmet>
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <div className="flex items-center justify-center py-12">
           <div className="text-center">
             <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">Video not found</h2>
             <p className="text-gray-600 dark:text-gray-400 mb-4">The video you're looking for doesn't exist.</p>

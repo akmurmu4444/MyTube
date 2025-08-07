@@ -48,7 +48,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, isCollapsed, onClose, onToggl
 
       {/* Sidebar */}
       <div className={`
-        fixed top-0 left-0 z-30 h-screen lg:relative lg:z-auto transform transition-all duration-200 ease-in-out
+        fixed top-0 left-0 z-50 h-screen lg:relative lg:z-auto transform transition-all duration-200 ease-in-out
         ${isOpen ? 'translate-x-0' : '-translate-x-full'}
         lg:translate-x-0 lg:relative
         ${isCollapsed ? 'lg:w-16' : 'lg:w-64'}

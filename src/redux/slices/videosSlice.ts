@@ -130,8 +130,49 @@ export const toggleLikeAsync = createAsyncThunk<
 // ✅ Thunk to load videos
 export const loadSavedVideos = createAsyncThunk(
   'videos/loadSavedVideos',
-  async () => {
-    const response = await videosAPI.getAll({ limit: 20, sortBy: 'addedAt', sortOrder: 'desc' });
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await videosAPI.getAll({ limit: 50, sortBy: 'addedAt', sortOrder: 'desc' });
+      return response.data.data;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || 'Failed to load videos');
+    }
+  }
+);
+
+// ✅ Thunk to get video by ID
+export const getVideoById = createAsyncThunk(
+  'videos/getById',
+  async (id: string, { rejectWithValue }) => {
+    try {
+      const response = await videosAPI.getById(id);
+      return response.data.data;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || 'Video not found');
+    }
+  }
+);
+
+// ✅ Thunk to ensure video exists in store
+export const ensureVideoLoaded = createAsyncThunk(
+  'videos/ensureLoaded',
+  async (id: string, { getState, dispatch, rejectWithValue }) => {
+    const state = getState() as { videos: VideosState };
+    const existingVideo = state.videos.videos.find(v => v._id === id);
+    
+    if (existingVideo) {
+      return existingVideo;
+    }
+    
+    // Video not in store, fetch it
+    try {
+      const response = await videosAPI.getById(id);
+      return response.data.data;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || 'Video not found');
+    }
+  }
+);
     return response.data.data;
   }
 );
@@ -277,7 +318,29 @@ const videosSlice = createSlice({
       })
       .addCase(loadSavedVideos.rejected, (state, action) => {
         state.loading = false;
-        state.error = 'Failed to load videos';
+        state.error = action.payload as string || 'Failed to load videos';
+      });
+    
+    // Get video by ID
+    builder
+      .addCase(getVideoById.fulfilled, (state, action) => {
+        const existingIndex = state.videos.findIndex(v => v._id === action.payload._id);
+        if (existingIndex === -1) {
+          state.videos.push(action.payload);
+        } else {
+          state.videos[existingIndex] = action.payload;
+        }
+      });
+    
+    // Ensure video loaded
+    builder
+      .addCase(ensureVideoLoaded.fulfilled, (state, action) => {
+        const existingIndex = state.videos.findIndex(v => v._id === action.payload._id);
+        if (existingIndex === -1) {
+          state.videos.push(action.payload);
+        } else {
+          state.videos[existingIndex] = action.payload;
+        }
       });
   },
 });
@@ -298,5 +361,8 @@ export const {
   removeVideo,
   addVideo
 } = videosSlice.actions;
+
+// Export the new thunks
+export { getVideoById, ensureVideoLoaded };
 
 export default videosSlice.reducer;

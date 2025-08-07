@@ -37,7 +37,7 @@ const VideoCard: React.FC<VideoCardProps> = ({
   const { isAuthenticated } = useAppSelector(state => state.auth);
 
   const handlePlay = () => {
-    // Navigate to video player page using the video ID
+    // Navigate to video player page using the video ID  
     navigate(`/video/${video._id}`);
   };
 
