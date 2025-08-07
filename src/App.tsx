@@ -33,10 +33,9 @@ function App() {
             
             {/* Video player with header */}
             <Route path="/video/:id" element={
-              <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-                <Header onMenuClick={() => {}} />
+              <Layout>
                 <VideoPlayer />
-              </div>
+              </Layout>
             } />
             
             {/* Main app routes */}

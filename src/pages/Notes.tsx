@@ -115,6 +115,10 @@ const Notes: React.FC = () => {
                               src={video.thumbnail}
                               alt={video.title}
                               className="w-16 h-12 object-cover rounded"
+                              onError={(e) => {
+                                const target = e.target as HTMLImageElement;
+                                target.src = 'https://images.pexels.com/photos/1097946/pexels-photo-1097946.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1';
+                              }}
                             />
                             <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-opacity rounded flex items-center justify-center">
                               <Play className="w-4 h-4 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -122,20 +126,35 @@ const Notes: React.FC = () => {
                           </Link>
                           <div>
                             <Link 
-                              to={`/video/${video.id}`}
+                              to={`/video/${video._id}`}
                               className="font-medium text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
                             >
                               {video.title}
                             </Link>
                             {note.timestamp && (
                               <Link 
-                                to={`/video/${video.id}?t=${note.timestamp}`}
+                                to={`/video/${video._id}?t=${note.timestamp}`}
                                 className="flex items-center space-x-1 text-sm text-blue-600 dark:text-blue-400 hover:underline"
                               >
                                 <Clock className="w-3 h-3" />
                                 <span>{formatTimestamp(note.timestamp)}</span>
                               </Link>
                             )}
+                          </div>
+                        </div>
+                      )}
+                      {!video && (
+                        <div className="flex items-center space-x-3 mb-3">
+                          <div className="w-16 h-12 bg-gray-200 dark:bg-gray-700 rounded flex items-center justify-center">
+                            <span className="text-gray-400 text-xs">No Video</span>
+                          </div>
+                          <div>
+                            <p className="font-medium text-gray-500 dark:text-gray-400">
+                              Video not found
+                            </p>
+                            <p className="text-sm text-gray-400 dark:text-gray-500">
+                              This video may have been deleted
+                            </p>
                           </div>
                         </div>
                       )}

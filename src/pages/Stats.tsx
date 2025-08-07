@@ -190,25 +190,35 @@ const Stats: React.FC = () => {
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
           Daily Activity (Last 7 Days)
         </h3>
-        <div className="grid grid-cols-7 gap-4">
+        <div className="grid grid-cols-7 gap-2 sm:gap-4">
           {stats.dailyActivity.map((day, index) => (
-            <div key={index} className="text-center">
-              <div className="text-xs text-gray-600 dark:text-gray-400 mb-2">
+            <div key={index} className="text-center min-w-0">
+              <div className="text-xs text-gray-600 dark:text-gray-400 mb-2 truncate">
                 {day.date}
               </div>
-              <div className="relative h-24 bg-gray-100 dark:bg-gray-700 rounded">
+              <div className="relative h-20 sm:h-24 bg-gray-100 dark:bg-gray-700 rounded overflow-hidden">
                 <div
                   className="absolute bottom-0 left-0 right-0 bg-blue-500 rounded"
                   style={{
-                    height: `${Math.max((day.watchTime / 120) * 100, 2)}%` // Max 2 hours scale
+                    height: `${Math.min(Math.max((day.watchTime / Math.max(...stats.dailyActivity.map(d => d.watchTime), 60)) * 100, 2), 100)}%`
                   }}
                 />
+                {day.watchTime > 0 && (
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <span className="text-xs text-white font-medium transform -rotate-90 whitespace-nowrap">
+                      {Math.round(day.watchTime)}m
+                    </span>
+                  </div>
+                )}
               </div>
-              <div className="text-xs text-gray-600 dark:text-gray-400 mt-2">
+              <div className="text-xs text-gray-600 dark:text-gray-400 mt-1 sm:mt-2 truncate">
                 {Math.round(day.watchTime)}m
               </div>
             </div>
           ))}
+        </div>
+        <div className="mt-4 text-xs text-gray-500 dark:text-gray-400 text-center">
+          Peak: {Math.round(Math.max(...stats.dailyActivity.map(d => d.watchTime)))}m
         </div>
       </div>
 
