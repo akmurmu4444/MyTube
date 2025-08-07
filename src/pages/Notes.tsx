@@ -16,6 +16,7 @@ const Notes: React.FC = () => {
   const dispatch = useDispatch();
   const notes = useSelector((state: RootState) => state.notes.notes);
   const videos = useSelector((state: RootState) => state.videos.videos);
+  console.log('Notes:', notes);
 
   const filteredNotes = notes.filter(note => {
     const video = videos.find(v => v.id === note.videoId);
@@ -99,7 +100,7 @@ const Notes: React.FC = () => {
           {filteredNotes
             .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
             .map(note => {
-              const video = videos.find(v => v.id === note.videoId);
+              const video = videos.find(v => v._id === note.videoId);
               return (
                 <div
                   key={note.id}
@@ -109,7 +110,7 @@ const Notes: React.FC = () => {
                     <div className="flex-1">
                       {video && (
                         <div className="flex items-center space-x-3 mb-3">
-                          <Link to={`/video/${video.id}`} className="relative group">
+                          <Link to={`/video/${video._id}`} className="relative group">
                             <img
                               src={video.thumbnail}
                               alt={video.title}
